@@ -6,6 +6,14 @@ import (
 	taskdomain "example.com/taskservice/internal/domain/task"
 )
 
+type RecurrenceRuleDTO struct {
+	Type       string   `json:"type"`
+	Interval   int      `json:"interval,omitempty"`
+	DayOfMonth int      `json:"day_of_month,omitempty"`
+	Dates      []string `json:"dates,omitempty"`
+	Parity     string   `json:"parity,omitempty"`
+}
+
 type Repository interface {
 	Create(ctx context.Context, task *taskdomain.Task) (*taskdomain.Task, error)
 	GetByID(ctx context.Context, id int64) (*taskdomain.Task, error)
@@ -26,10 +34,12 @@ type CreateInput struct {
 	Title       string
 	Description string
 	Status      taskdomain.Status
+	Recurrence  *RecurrenceRuleDTO
 }
 
 type UpdateInput struct {
 	Title       string
 	Description string
 	Status      taskdomain.Status
+	Recurrence  *RecurrenceRuleDTO
 }

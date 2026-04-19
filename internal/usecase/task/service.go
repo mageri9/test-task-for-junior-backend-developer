@@ -14,6 +14,53 @@ type Service struct {
 	now  func() time.Time
 }
 
+func convertRecurrenceRuleDTO(dto *RecurrenceRuleDTO) (*taskdomain.RecurrenceRule, error) {
+	if dto == nil {
+		return nil, nil
+	}
+
+	rule := &taskdomain.RecurrenceRule{
+		Type:       taskdomain.RecurrenceType(dto.Type),
+		Interval:   dto.Interval,
+		DayOfMonth: dto.DayOfMonth,
+		Dates:      dto.Dates,
+		Parity:     dto.Parity,
+	}
+
+	switch rule.Type {
+	case taskdomain.RecurrenceDaily:
+		if rule.Interval <= 0 {
+			return nil, fmt.Errorf("%w: daily interval must be > 0", ErrInvalidInput)
+		}
+
+	case taskdomain.RecurrenceMonthly:
+		if rule.DayOfMonth < 1 || rule.DayOfMonth > 30 {
+			return nil, fmt.Errorf("%w: monthly day must be between 1 and 30", ErrInvalidInput)
+		}
+
+	case taskdomain.RecurrenceSpecificDates:
+		if len(rule.Dates) == 0 {
+			return nil, fmt.Errorf("%w: specific dates cannot be empty", ErrInvalidInput)
+		}
+
+		for _, date := range rule.Dates {
+			if _, err := time.Parse("2006-01-02", date); err != nil {
+				return nil, fmt.Errorf("%w: invalid date format '%s', expected YYYY-MM-DD", ErrInvalidInput, date)
+			}
+		}
+
+	case taskdomain.RecurrenceParity:
+		if rule.Parity != "even" && rule.Parity != "odd" {
+			return nil, fmt.Errorf("%w: parity must be 'even' or 'odd'", ErrInvalidInput)
+		}
+
+	default:
+		return nil, fmt.Errorf("%w: unknown recurrence type '%s'", ErrInvalidInput, rule.Type)
+	}
+
+	return rule, nil
+}
+
 func NewService(repo Repository) *Service {
 	return &Service{
 		repo: repo,
@@ -27,14 +74,20 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*taskdomain.Ta
 		return nil, err
 	}
 
+	recurrenceRule, err := convertRecurrenceRuleDTO(input.Recurrence)
+	if err != nil {
+		return nil, err
+	}
+
+	now := s.now()
 	model := &taskdomain.Task{
 		Title:       normalized.Title,
 		Description: normalized.Description,
 		Status:      normalized.Status,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+		Recurrence:  recurrenceRule,
 	}
-	now := s.now()
-	model.CreatedAt = now
-	model.UpdatedAt = now
 
 	created, err := s.repo.Create(ctx, model)
 	if err != nil {
@@ -62,12 +115,18 @@ func (s *Service) Update(ctx context.Context, id int64, input UpdateInput) (*tas
 		return nil, err
 	}
 
+	recurrenceRule, err := convertRecurrenceRuleDTO(input.Recurrence)
+	if err != nil {
+		return nil, err
+	}
+
 	model := &taskdomain.Task{
 		ID:          id,
 		Title:       normalized.Title,
 		Description: normalized.Description,
 		Status:      normalized.Status,
 		UpdatedAt:   s.now(),
+		Recurrence:  recurrenceRule,
 	}
 
 	updated, err := s.repo.Update(ctx, model)
