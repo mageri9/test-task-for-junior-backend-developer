@@ -38,7 +38,7 @@ func main() {
 
 	taskRepo := postgresrepo.New(pool)
 
-	sched := schedulerpkg.New(taskRepo, logger, 10*time.Second)
+	sched := schedulerpkg.New(taskRepo, logger, 1*time.Hour)
     sched.Start(ctx)
 
 	taskUsecase := taskusecase.NewService(taskRepo)
