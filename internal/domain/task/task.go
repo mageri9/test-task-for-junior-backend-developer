@@ -10,13 +10,31 @@ const (
 	StatusDone       Status = "done"
 )
 
+type RecurrenceType string
+
+const (
+	RecurrenceDaily         RecurrenceType = "daily"
+	RecurrenceMonthly       RecurrenceType = "monthly"
+	RecurrenceSpecificDates RecurrenceType = "specific_dates"
+	RecurrenceParity        RecurrenceType = "parity"
+)
+
+type RecurrenceRule struct {
+	Type       RecurrenceType `json:"type"`
+	Interval   int            `json:"interval,omitempty"`
+	DayOfMonth int            `json:"day_of_month,omitempty"`
+	Dates      []string       `json:"dates,omitempty"`
+	Parity     string         `json:"parity,omitempty"`
+}
+
 type Task struct {
-	ID          int64     `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Status      Status    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int64           `json:"id"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Status      Status          `json:"status"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+	Recurrence  *RecurrenceRule `json:"recurrence,omitempty"`
 }
 
 func (s Status) Valid() bool {
