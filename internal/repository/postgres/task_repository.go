@@ -21,10 +21,10 @@ func New(pool *pgxpool.Pool) *Repository {
 
 func (r *Repository) Create(ctx context.Context, task *taskdomain.Task) (*taskdomain.Task, error) {
 	const query = `
-		INSERT INTO tasks (title, description, status, created_at, updated_at, recurrence)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, description, status, created_at, updated_at, recurrence
-	`
+        INSERT INTO tasks (title, description, status, created_at, updated_at, recurrence, source_task_id, scheduled_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, title, description, status, created_at, updated_at, recurrence
+    `
 
 	var recurrenceJSON []byte
 	if task.Recurrence != nil {
@@ -42,6 +42,8 @@ func (r *Repository) Create(ctx context.Context, task *taskdomain.Task) (*taskdo
 		task.CreatedAt,
 		task.UpdatedAt,
 		recurrenceJSON,
+		task.SourceTaskID,
+		task.ScheduledDate,
 	)
 
 	return scanTask(row)
@@ -142,6 +144,32 @@ func (r *Repository) List(ctx context.Context) ([]taskdomain.Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func (r *Repository) ListRecurring(ctx context.Context) ([]taskdomain.Task, error) {
+    const query = `
+        SELECT id, title, description, status, created_at, updated_at, recurrence
+        FROM tasks
+        WHERE recurrence IS NOT NULL
+        ORDER BY id
+    `
+
+    rows, err := r.pool.Query(ctx, query)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    tasks := make([]taskdomain.Task, 0)
+    for rows.Next() {
+        task, err := scanTask(rows)
+        if err != nil {
+            return nil, err
+        }
+        tasks = append(tasks, *task)
+    }
+
+    return tasks, nil
 }
 
 type taskScanner interface {

@@ -35,6 +35,8 @@ type Task struct {
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
 	Recurrence  *RecurrenceRule `json:"recurrence,omitempty"`
+	SourceTaskID *int64          `json:"source_task_id,omitempty"`
+	ScheduledDate *time.Time     `json:"scheduled_date,omitempty"`
 }
 
 func (s Status) Valid() bool {
